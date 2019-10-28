@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Ecg-test</title>
+    <style>
+        body {
+            background-color: black;
+            margin: 20px;
+        }
+
+        #c {
+            background:
+                -webkit-linear-gradient(left, black 0%, white 100%),
+                -webkit-linear-gradient(left, black 0%, red 100%),
+                -webkit-linear-gradient(left, black 0%, lime 100%),
+                -webkit-linear-gradient(left, black 0%, #07f 100%);
+            background-size:
+                100% 25%;
+            background-position-x: 0;
+            background-position-y:
+                0,
+                33%,
+                66%,
+                100%;
+            background-repeat: repeat-x;
+            -webkit-animation-name: linemove;
+            -webkit-animation-duration: 5s;
+            -webkit-animation-iteration-count: infinite;
+            -webkit-animation-timing-function: linear;
+        }
+
+        @-webkit-keyframes linemove {
+            from {
+                background-position-x: 0;
+            }
+
+            to {
+                background-position-x:
+                    500px,
+                    500px,
+                    500px,
+                    500px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <canvas id="c" width="500" height="200"></canvas>
+    </div>
+
+    <script>
+        function drawLine(ctx, y, h) {
+
+            function randHeight(position) {
+                var change = h * (2 / 7);
+                var padding = h * (1 / 4);
+                var range = h - (padding * 2);
+                if (!position) position = (Math.random() * range) + padding;
+                return clip(position + (Math.random() * (change * 2) - change), padding + y, range + padding + y);
+            }
+
+            function clip(number, min, max) {
+                return Math.min(Math.max(number, min + (Math.random() * (max - min) * 0.2)), max - (Math.random() * (max - min) * 0.2));
+            }
+
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.fillRect(0, y, ctx.canvas.width, h);
+
+            ctx.globalCompositeOperation = 'destination-out';
+
+            ctx.beginPath();
+            var lastPosition = randHeight();
+            ctx.moveTo(0, lastPosition);
+            for (var i = 0; i < ctx.canvas.width; i++) {
+                ctx.lineTo(i += Math.random() * 5, lastPosition = randHeight(lastPosition));
+            }
+            ctx.stroke();
+
+        }
+
+        var canvas = document.getElementById('c');
+        var ctx = canvas.getContext('2d');
+
+        var lines = 4;
+
+        for (var i = 0; i < lines; i++) {
+            drawLine(ctx, i * (canvas.height / lines), canvas.height / lines);
+        }
+    </script>
+</body>
+
+</html>

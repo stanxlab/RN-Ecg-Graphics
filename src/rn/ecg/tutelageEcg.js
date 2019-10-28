@@ -1,0 +1,558 @@
+/**
+     * Electrocardiogram
+     * 
+     * @param canvas
+     *           HTML element
+     * @param option
+     *           The option to create an electrocardiogram
+     * @see http://en.wikipedia.org/wiki/Electrocardiogram
+     */
+export default class Electrocardiogram {
+    constructor(canvas, option) {
+
+        option = option || {};
+
+        this.$gridColor = '#3D3D3D'; // 表格border颜色
+        this.$strokeColor = '#61D65F'; // 默认划线颜色
+        this.$textColor = '#61D65F'; // 默认文字颜色
+        this.$markStrokeColor = 'red'; // 默认异常颜色
+        this.$markLineColor = 'rgb(93,211,91)'; // 标志线的颜色
+        this.$bgColor = '#0A0A0A'; // 背景颜色
+        this.$markLength = 50;
+
+        this.$cellSize = option.cellSize || Electrocardiogram.CELL_SIZE; // 8
+        this.$samplingRate = option.samplingRate || Electrocardiogram.SAMPLING_RATE; // 125
+        this.$canvas = canvas; //this.$dom.createElement('CANVAS');
+        this.$graphics = canvas.getContext('2d');
+        this.$canvas.width = option.width || canvas.width;
+        this.$canvas.height = option.height || canvas.height;
+
+        // ^ -------------------- 调整画线偏移参数 -------------------
+        this.$drawingBoardHeight = option.drawingBoardHeight || 200; // 实际绘画区域高度
+        this.$drawingGridMiddle = option.drawingGridMiddle || 0; // 北京网格中心线高度
+        this.$ecgGridSize = option.ecgGridSize || 17; // 每小格画多少个ecg
+        this.$drawingGridSize = option.drawingGridSize || 45; // 画板中共有多个小格
+        // v -------------------- 调整画线偏移参数 -------------------
+
+        // this.$canvas.appendChild(this.$canvas);
+        // this.drawGrid();
+    }
+
+    /**
+     * Returns the cell size
+     * 
+     * @return the cell size
+     */
+    getCellSize() {
+        return this.$cellSize;
+    };
+
+    /**
+     * Returns the block size
+     * 
+     * @return the block size
+     */
+    getBlockSize() {
+        return 5 * this.$cellSize;
+    };
+
+    /**
+     * Returns the number of cells per period
+     * 
+     * @return the number of cells per period
+     */
+    getCellsPerPeriod() {
+        return Math.floor(this.getWidth() / this.getCellSize());
+    };
+
+    /**
+     * Returns the number of samples per cell
+     * 
+     * @return the number of samples per cell
+     */
+    getSamplesPerCell() {
+        return 0.04 * this.getSamplingRate();
+    };
+
+    /**
+     * Returns the number of samples per second
+     * 
+     * @return the number of samples per second
+     */
+    getSamplingRate() {
+        return this.$samplingRate;
+    };
+
+    /**
+     * Returns the number of samples per period
+     * 
+     * @return the number of samples per period
+     */
+    getSamplesPerPeriod() {
+        return Math.floor(0.04 * this.getSamplingRate() * (this.getWidth() / this.getCellSize()));
+    };
+
+    /**
+     * Returns the width of this electrocardiogram
+     * 
+     * @return the width of this electrocardiogram
+     */
+    getWidth() {
+        return this.$graphics.canvas.width;
+    };
+
+    /**
+     * Returns the height of this electrocardiogram
+     * 
+     * @return the height of this electrocardiogram
+     */
+    getHeight() {
+        return this.$graphics.canvas.height;
+    };
+
+    /**
+     * Returns the period (seconds) of this electrocardiogram(返回时间(秒)的心电图)
+     * 
+     * @return the period of this electrocardiogram(心电图的周期)
+     */
+    getPeriod() {
+        return 0.04 * this.getWidth() / this.getCellSize();
+    };
+
+    /**
+     * Clear this electrocardiogram
+     */
+    clear() {
+        this.$graphics.clearRect(0, 0, this.getWidth(), this.getHeight());
+    };
+
+    /**
+     * Draw curve with specified data
+     * data 数据
+     * colormk 颜色标记，异常曲线数据
+     * textmks 文本标记，异常名称缩写数据
+     * drawGrid boolean类型 是否画背景grid，默认true
+     * color boolean类型 是否添加颜色标示,false不添加颜色标示时，以增宽划线宽度加以区分lineWidth=1，默认true
+     */
+    drawCurve(data, colormk, textmks, drawGrid, color) {
+        let i = 0;
+        let dt = null;
+        let p0 = null;
+        let p1 = null;
+        let cs = this.getCellSize();//4
+        let sr = this.getSamplingRate();//125
+        let lw = this.$graphics.lineWidth;
+        let ss = this.$graphics.strokeStyle;
+        let delta = cs / (0.04 * sr);   // 4 / (0.04 * 125) = 2.4 //每个样本的偏移量（单位是像素）x轴偏移
+        let height = this.getHeight();
+        let period = this.getPeriod();
+        let half = height / 3;
+
+        this.clear();
+        if (drawGrid != false) {
+            this.drawGrid();
+        }
+        this.$graphics.translate(0, height);
+
+        while (i < data.length) {
+            if ((p0 = data[i++]))
+                break;
+        }
+
+        p0.offset = (i - 1) * delta;
+
+        while (i < data.length) {
+            p1 = data[i];
+            p1.offset = i * delta;
+
+            this.$graphics.beginPath();
+            this.$graphics.lineWidth = Electrocardiogram.CURVE_WIDTH;
+            this.$graphics.strokeStyle = this.$strokeColor;
+            //y轴0到-181可见 与画布的高度有关
+            //x1, y1, x2, y2
+            //alert(((i - 1) * delta) +" -- "+(-p0.v)+" -- "+(i * delta)+" -- "+(-p1.v));
+            //异常区域变色
+            for (let cmindex in colormk) {
+                if (i > colormk[cmindex].s && i < colormk[cmindex].e) {
+                    if (typeof (colormk[cmindex].c) != "undefined" && colormk[cmindex].c != "" && color != false) {
+                        this.$graphics.strokeStyle = colormk[cmindex].c;
+                    } else {
+                        this.$graphics.lineWidth = 1;
+                    }
+                    break;
+                }
+            }
+
+            this.drawLine(p0.offset, -p0.v, p1.offset, -p1.v);
+            this.$graphics.closePath();
+            this.$graphics.stroke();
+            p0 = p1;
+            i++;
+        }
+
+        this.$graphics.lineWidth = lw;
+        this.$graphics.strokeStyle = ss;
+        this.$graphics.translate(0, -height);
+        //异常类型名称标示部分
+        for (let tmIndex in textmks) {
+            if (typeof (textmks[tmIndex].c) != "undefined" && textmks[tmIndex].c != "" && color != false) {
+                this.$textColor = textmks[tmIndex].c;
+            } else {
+                //this.$graphics.lineWidth = 1;
+                this.$textColor = this.$strokeColor;
+            }
+            this.drawText(textmks[tmIndex].x, textmks[tmIndex].y, textmks[tmIndex].t);
+            this.$textColor = this.$strokeColor;
+        }
+    };
+
+
+    /**
+     * Draw curve with specified data
+     * data 数据
+     * colormk 颜色标记，异常曲线数据
+     * textmks 文本标记，异常名称缩写数据
+     * drawGrid boolean类型 是否画背景grid，默认true
+     * color boolean类型 是否添加颜色标示,false不添加颜色标示时，以增宽划线宽度加以区分lineWidth=1，默认true
+     */
+    drawTemplateCurve(data, colormk, textmks, drawGrid, color) {
+        let i = 0;
+        let dt = null;
+        let p0 = null;
+        let p1 = null;
+        let cs = this.getCellSize();//4
+        let sr = this.getSamplingRate();//125
+        let lw = this.$graphics.lineWidth;
+        let ss = this.$graphics.strokeStyle;
+        let delta = cs / (0.04 * sr);   // 4 / (0.04 * 125) = 2.4 //每个样本的偏移量（单位是像素）x轴偏移
+        let height = this.getHeight();
+        let period = this.getPeriod();
+        let half = height / 3;
+        let startOffset = 95;
+
+        this.clear();
+        if (drawGrid != false) {
+            this.drawGrid();
+        }
+        this.$graphics.translate(0, height);
+
+        while (i < data.length) {
+            if ((p0 = data[i++]))
+                break;
+        }
+
+        p0.offset = (i - 1) * delta + startOffset;
+
+        while (i < data.length) {
+            p1 = data[i];
+            p1.offset = i * delta + startOffset;
+
+            this.$graphics.beginPath();
+            this.$graphics.lineWidth = Electrocardiogram.CURVE_WIDTH;
+            this.$graphics.strokeStyle = this.$strokeColor;
+            //y轴0到-181可见 与画布的高度有关
+            //x1, y1, x2, y2
+            //alert(((i - 1) * delta) +" -- "+(-p0.v)+" -- "+(i * delta)+" -- "+(-p1.v));
+            //异常区域变色
+            for (let cmindex in colormk) {
+                if (i > colormk[cmindex].s && i < colormk[cmindex].e) {
+                    if (typeof (colormk[cmindex].c) != "undefined" && colormk[cmindex].c != "" && color != false) {
+                        this.$graphics.strokeStyle = colormk[cmindex].c;
+                    } else {
+                        this.$graphics.lineWidth = 1;
+                    }
+                    break;
+                }
+            }
+
+            this.drawLine(p0.offset, -p0.v, p1.offset, -p1.v);
+            this.$graphics.closePath();
+            this.$graphics.stroke();
+            p0 = p1;
+            i++;
+        }
+        this.$graphics.lineWidth = lw;
+        this.$graphics.strokeStyle = ss;
+        this.$graphics.translate(0, -height);
+        //异常类型名称标示部分
+        for (let tmIndex in textmks) {
+            if (typeof (textmks[tmIndex].c) != "undefined" && textmks[tmIndex].c != "" && color != false) {
+                this.$textColor = textmks[tmIndex].c;
+            } else {
+                //this.$graphics.lineWidth = 1;
+                this.$textColor = this.$strokeColor;
+            }
+            this.drawText(textmks[tmIndex].x, textmks[tmIndex].y, textmks[tmIndex].t);
+            this.$textColor = this.$strokeColor;
+        }
+    };
+
+
+    drawCurveByValue(data) {
+        // return ;
+        let i = 0;
+        let dt = null;
+        let p0 = null;
+        let p1 = null;
+        let cs = this.getCellSize();//4
+        let sr = this.getSamplingRate();//125
+        let lw = this.$graphics.lineWidth;
+        let ss = this.$graphics.strokeStyle;
+        let delta = cs / (0.04 * sr);   // 4 / (0.04 * 125) = 0.8 //每个样本的偏移量（单位是像素）x轴偏移
+        let height = this.getHeight() / 2;
+        let period = this.getPeriod();
+        let half = height / 3;
+
+        this.clear();
+        // this.drawGrid();
+        this.$graphics.translate(0, height);
+        this.$graphics.strokeStyle = this.$strokeColor;
+
+        while (i < data.length) {
+            if ((p0 = data[i++]))
+                break;
+        }
+        p0.offset = (i - 1) * delta;
+
+        while (i < data.length) {
+            p1 = data[i];
+            p1.offset = i * delta;
+
+            this.$graphics.beginPath();
+            this.$graphics.lineWidth = Electrocardiogram.CURVE_WIDTH;
+            //实时绘图判断是否为补点,如果补点则设置画线颜色为背景色
+            if (!p0.d || !p1.d) {
+                this.$graphics.strokeStyle = this.$strokeColor;
+            } else {
+                this.$graphics.strokeStyle = this.$strokeColor;
+            }
+            //y轴0到-181可见 与画布的高度有关
+            //x1, y1, x2, y2
+            this.drawLine(p0.offset, -p0.v, p1.offset, -p1.v);
+            this.$graphics.closePath();
+            this.$graphics.stroke();
+            p0 = p1;
+            i++;
+
+            if (i == (parseInt(data.length / 2))) {
+                this.$graphics.fillStyle = "#61D65F";
+                //this.$graphics.fillRect(p0.offset,-p0.v-5,8,8);
+                this.$graphics.arc(p0.offset, -p0.v, 4, 0, 2 * Math.PI);
+                this.$graphics.fill();
+            }
+        }
+        this.$graphics.lineWidth = lw;
+        this.$graphics.strokeStyle = ss;
+        this.$graphics.translate(0, -height);
+    };
+
+    /**
+     * Draw the grid
+     */
+    drawGrid(bgColor, gridColor) {
+
+        let x = 0;
+        let y = 0;
+        let w = this.getWidth();//501
+        let h = this.getHeight();//184
+        let bs = this.getBlockSize();//17.5
+        let cs = this.getCellSize();//3
+        let lw = this.$graphics.lineWidth;
+        let ss = this.$graphics.strokeStyle;
+
+        // console.log('[drawGrid]', JSON.stringify({
+        //     x,
+        //     y,
+        //     w,
+        //     h,
+        //     bs,
+        //     cs,
+        //     lw,
+        //     ss
+        // }));
+
+        //画背景色
+        this.$graphics.fillStyle = bgColor || this.$bgColor;
+        this.$graphics.fillRect(0, 0, w, h);
+        //画表格
+        this.$graphics.strokeStyle = gridColor || this.$gridColor;
+
+        for (let y = y1 = y2 = h; y1 >= 0; y1 -= cs, y2 += cs) {
+            this.$graphics.beginPath();
+            this.$graphics.lineWidth = ((y - y1) % bs) ? Electrocardiogram.CELL_WIDTH : Electrocardiogram.BLOCK_WIDTH;
+            this.drawLine(0, y1 - 0.5, w, y1 - 0.5);
+            //this.drawLine(0, y2, w, y2);
+            this.$graphics.closePath();
+            this.$graphics.stroke();
+        }
+        for (let x = 0; x <= w; x += cs) {
+            this.$graphics.beginPath();
+            this.$graphics.lineWidth = (x % bs) ? Electrocardiogram.CELL_WIDTH : Electrocardiogram.BLOCK_WIDTH;
+            this.drawLine(x + 0.5, 0, x + 0.5, h);
+            this.$graphics.closePath();
+            this.$graphics.stroke();
+        }
+        this.$graphics.lineWidth = lw;
+        this.$graphics.strokeStyle = ss;
+    };
+
+    /**
+     * Draw a line from point (x1, y1) to point (x2, y2)
+     */
+    drawLine(x1, y1, x2, y2) {
+        this.$graphics.moveTo(x1, y1);
+        this.$graphics.lineTo(x2, y2);
+    };
+
+
+    /**
+     * Draw a text
+     */
+    drawText(x, y, text) {
+        this.$graphics.font = "14px/1.5 Microsoft Yahei";
+        this.$graphics.textAlign = 'right';
+        this.$graphics.fillStyle = this.$textColor;
+        this.$graphics.fillText(text, x, y);
+    }
+
+    /**
+     * 添加刻度
+     * size 分为几格
+     */
+    drawScale(size) {
+        let w = this.getWidth();//501
+        let h = this.getHeight();//184
+        let x = w / size;
+        this.$graphics.beginPath();
+        this.$graphics.lineWidth = 1;
+        this.$graphics.strokeStyle = this.$strokeColor;
+        for (let i = 0; i <= size; i++) {
+            this.drawLine(x * i, h, x * i, h - 3);
+            this.drawText((x * i) + 5, h - 3, i);//5：文字偏移5
+        }
+        this.$graphics.closePath();
+        this.$graphics.stroke();
+    }
+
+    convertToImg() {
+        let imgdata = this.$canvas.toDataURL("image/octet-stream");
+        //将图片保存到本地
+        let saveFile = function (data, filename) {
+            let link = document.createElement('a');
+            link.href = data;
+            link.download = filename;
+            let event = document.createEvent('MouseEvents');
+            event.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+            link.dispatchEvent(event);
+        }
+        let filename = new Date().toLocaleDateString() + '.png';
+        saveFile(imgdata, filename);
+    }
+
+    /**
+     * 转换滤波数据和绘图数据
+     * @param dataArray 原始数据
+     * @param drawArray 绘图有效区域上下限
+     * @param defaultZoom 默认缩放倍数
+     * @return
+     */
+    getDrawingDatas(dataArray, drawArray, defaultZoom) {
+        let ecgMax = 0;          // 绘图数据中的最大电压值
+        let ecgMin = 0;          // 绘图数据中的最小电压值
+        let ecgMiddle;           // 绘图数据中的基线电压值
+        let ecgHeightDifference; // 电压高低差
+        let ecgHeightLimit;      // 有效绘图区域高度
+        let ecgLimitMiddle;      // 有效绘图区域中心点
+        let floatArray = [];     // 绘图数据
+
+        // 计算数据最大值与最小值
+        for (let i = 0; i < dataArray.length; i++) {
+            if (dataArray[i].v < 40000) {
+                floatArray.push(dataArray[i])
+                ecgMax = floatArray[i].v > ecgMax ? floatArray[i].v : ecgMax;
+                ecgMin = floatArray[i].v < ecgMin ? floatArray[i].v : ecgMin;
+            }
+        }
+        // 电压高低差一半为电压中心点,将该点设为绘图板的中心线,已此线为基准,向上绘制高电压点,向下绘制低电压点
+        // 避免正常的数据中最大值与最小值相加后为0，网页上画直线的问题
+        if (Math.abs(ecgMin) == ecgMax && ecgMin != 0 && ecgMax != 0) {
+            ecgHeightDifference = ecgMax - 1;
+        } else {
+            ecgHeightDifference = ecgMax + ecgMin;
+        }
+        // console.log(ecgHeightDifference)
+        ecgMiddle = ecgHeightDifference / 2;
+        // console.log(ecgMiddle)
+        // 像素系数  = 画板高度/17*画板小格数
+        let pxCoefficient = this.$drawingBoardHeight / (this.$ecgGridSize * this.$drawingGridSize); // 标准10mm/mv 
+        pxCoefficient = pxCoefficient.toFixed(2)
+        // 根据高低差调整绘图电压调整缩放倍数
+        // 根据defaultZoon固定调整缩放
+        // if(defaultZoom == 3){
+        //     pxCoefficient = pxCoefficient * 8; // 80mm/mv
+        // }else if(defaultZoom == 2){
+        //     pxCoefficient = pxCoefficient * 4; // 40mm/mv
+        // }else if(defaultZoom == 1){
+        //     pxCoefficient = pxCoefficient * 2; // 20mm/mv
+        // }else if(defaultZoom == 0){
+        //     pxCoefficient = pxCoefficient * 1; // 10mm/mv
+        // }else if(defaultZoom == -1){
+        //     pxCoefficient = pxCoefficient / 2; // 5mm/mv
+        // }
+        // 如果电压差为0,让这条线停留在画布中间位置
+        // 例如画布实际能见高度为172,中心线为89
+        // 同时把绘制标记的Y轴坐标算出来
+        // ecgMax = 0;
+        // ecgMin = 0;
+        if (ecgHeightDifference == 0.0) {
+            for (let j = 0; j < floatArray.length; j++) {
+                floatArray[j].v = this.$drawingGridMiddle;
+            }
+        } else {
+            for (let k = 0; k < floatArray.length; k++) {
+                // 电压高低差中心点+（实际电压点-电压高低差中点） * 像素系数
+                floatArray[k].v = this.$drawingGridMiddle + (floatArray[k].v - ecgMiddle) * pxCoefficient;
+                floatArray[k].v = floatArray[k].v
+                ecgMax = floatArray[k].v > ecgMax ? floatArray[k].v : ecgMax;
+                ecgMin = floatArray[k].v < ecgMin ? floatArray[k].v : ecgMin;
+            }
+        }
+        return floatArray;
+    }
+};
+
+/**
+ * The stroke width of cell(笔划宽度)
+ */
+Electrocardiogram.CELL_WIDTH = 0.5;
+
+/**
+ * The cell size(单元格大小)
+ */
+Electrocardiogram.CELL_SIZE = 4;
+
+/**
+ * The stroke width of block
+ */
+Electrocardiogram.BLOCK_WIDTH = 1;
+
+/**
+ * The block size, each block includes 5*5 cells
+ */
+Electrocardiogram.BLOCK_SIZE = Electrocardiogram.CELL_SIZE * 5;
+
+/**
+ * The stroke width of curve（曲线宽度）
+ */
+Electrocardiogram.CURVE_WIDTH = 0.8;
+
+/**
+ * The number of samples per second (1/0.008)
+ */
+Electrocardiogram.SAMPLING_RATE = 250;
+
+/**
+ * The frequency to update the curve
+ */
+Electrocardiogram.FREQUENCY = 250;
+
