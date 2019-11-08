@@ -8,6 +8,7 @@
     "eject": "expo eject"
   },
   "dependencies": {
+    "@react-native-community/art": "^1.0.2",
     "expo": "^35.0.0",
     "react": "^16.8.3",
     "react-dom": "^16.8.3",

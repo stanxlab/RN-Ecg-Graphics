@@ -13,9 +13,18 @@ function makeEcgData() {
     }
     return arr;
 }
-var i = 0;
 
 export default class EcgTest1 extends Component {
+    //构造函数
+    constructor(props) {
+        super(props);
+        this.state = {
+            text: 'init-txt',
+            counter: 0,
+            time: Date.now(),
+        };
+    }
+
     handleCanvas = (canvas) => {
         let maxX = 350;
         let maxY = 200;
@@ -52,14 +61,25 @@ export default class EcgTest1 extends Component {
             ecg.drawCurveByValue(ecg.getDrawingDatas(makeEcgData()));
 
             // this._drawGridRandom();
-            console.log(i++);
-        }, 1000);
+
+            this.setState((oldState) => {
+                // console.log(oldState);//老的状态值
+
+                // 返回值会和原来的值合并
+                return {
+                    counter: oldState.counter + 1,
+                    time: Date.now(),
+                };
+            })
+        }, 100);
+
+
     }
 
     _drawGridRandom() {
         // test
         let bgColor = getRandomColor();
-        let gridColor = null; //getRandomColor();
+        let gridColor = getRandomColor(); // null; //
         this.ecg.drawGrid(bgColor, gridColor);
     }
 
@@ -72,6 +92,9 @@ export default class EcgTest1 extends Component {
         return (
             <View style={styles.container}>
                 <Text style={{ color: "red" }}>[Ecg] Current OS: {Platform.OS}</Text>
+                <Text style={{ color: "#fff" }}>State: time={this.state.time}</Text>
+                <Text style={{ color: "#fff" }}>     counter={this.state.counter}</Text>
+                <Text style={{ color: "#fff" }}>     text={this.state.text}</Text>
                 <Canvas ref={this.handleCanvas} />
             </View>
         );
@@ -81,7 +104,7 @@ export default class EcgTest1 extends Component {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: '#abc',
         alignItems: 'center',
         justifyContent: 'center',
     },

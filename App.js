@@ -1,8 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View, WebView, Platform } from 'react-native';
 
-import MyVebView from './src/rn/ecg/ecgWebView'; // -- 这里例子比较完整,嵌入webView
-// import MyVebView from './src/rn/ecg/index';  // 直接使用rn绘制心电图
+// import MyVebView from './src/rn/ecg/ecgWebView'; // -- 这里例子比较完整,嵌入webView
+import MyVebView from './src/rn/ecg/index';  // 直接使用rn绘制心电图
+// import MyVebView from './src/svg/SvgDraw';  // 
 
 // import MyVebView from './src/rn/example'; // react-native-canvas示例
 

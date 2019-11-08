@@ -28,7 +28,7 @@ export default class App extends Component {
                 }
                 let msg = JSON.stringify(data);
                 this.webView.postMessage(msg);
-            }, 1000 / 60);
+            }, 1000 / 120);
         }, 3000);
     }
     handleMessage(e) {
